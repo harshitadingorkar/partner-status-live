@@ -4,7 +4,7 @@ import { getDatabase, ref, onValue, set } from 'firebase/database';
 import styled from '@emotion/styled';
 import { keyframes } from '@emotion/react';
 
-// Your Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDFUVjoaH3QKmtgisZHH3QAXggS28d3P0M",
   authDomain: "couple-status-9c30e.firebaseapp.com",
@@ -25,13 +25,18 @@ const fadeIn = keyframes`
   to { opacity: 1; }
 `;
 
-// Styled components
+// Styled Components
 const Container = styled.div`
   max-width: 600px;
   margin: 0 auto;
   padding: 20px;
   background: #FFF9F0;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
+  width: 100%;
+  position: relative;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 `;
 
@@ -132,9 +137,11 @@ const EmojiButton = styled.button`
   cursor: pointer;
   transition: transform 0.2s;
   aspect-ratio: 1;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   
-  &:hover {
-    transform: scale(1.1);
+  &:active {
+    transform: scale(0.95);
   }
 `;
 
@@ -191,24 +198,33 @@ const Splash = ({ onFinish }) => {
 
 // Main App Component
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [statuses, setStatuses] = useState({
-    raghav: { emoji: '💭', timestamp: Date.now(), name: 'Raghav' },
-    shona: { emoji: '💭', timestamp: Date.now(), name: 'Harshita' }
+    you: { emoji: '💭', timestamp: Date.now(), name: 'You' },
+    shona: { emoji: '💭', timestamp: Date.now(), name: 'Shona' }
   });
 
   const quickEmojis = ['💻', '🍽️', '😴', '📺', '♿', '🏃', '🎮', '🕺🏽', '👥', '🛒'];
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const statusesRef = ref(database, 'statuses');
     const unsubscribe = onValue(statusesRef, (snapshot) => {
       const data = snapshot.val();
-      if (data && data.raghav && data.shona) {
+      if (data && data.you && data.shona) {
         setStatuses(data);
         // Trigger browser notification
         if (Notification.permission === 'granted') {
           new Notification('Status Updated', {
-            body: `Raghav: ${data.raghav.emoji}  Harshita: ${data.shona.emoji}`,
+            body: `You: ${data.you.emoji}  Shona: ${data.shona.emoji}`,
           });
         }
       }
@@ -222,22 +238,22 @@ function App() {
     return () => unsubscribe();
   }, []);
 
- const updateStatus = async (emoji) => {
-  try {
-    const newStatuses = {
-      ...statuses,
-      shona: {  // Changed from 'you' to 'shona'
-        emoji,
-        timestamp: Date.now(),
-        name: 'Harshita'
-      }
-    };
-    
-    await set(ref(database, 'statuses'), newStatuses);
-  } catch (error) {
-    console.error('Error updating status:', error);
-  }
-};
+  const updateStatus = async (emoji) => {
+    try {
+      const newStatuses = {
+        ...statuses,
+        shona: {  // You are updating 'shona' status in web version
+          emoji,
+          timestamp: Date.now(),
+          name: 'Shona'
+        }
+      };
+      
+      await set(ref(database, 'statuses'), newStatuses);
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
 
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], { 
@@ -245,6 +261,22 @@ function App() {
       minute: '2-digit' 
     });
   };
+
+  if (isLoading) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFF9F0',
+        color: '#5C4B37',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
 
   if (showSplash) {
     return <Splash onFinish={() => setShowSplash(false)} />;
@@ -255,26 +287,29 @@ function App() {
       <Title>Our Status</Title>
       
       <StatusRow>
-        {Object.entries(statuses).map(([person, status]) => (
-          <StatusCard key={person}>
-            <Emoji>{status.emoji}</Emoji>
-            <Label>{status.name}</Label>
-            <Time>{formatTime(status.timestamp)}</Time>
-          </StatusCard>
-        ))}
+        <StatusCard>
+          <Emoji>{statuses.you.emoji}</Emoji>
+          <Label>Raghav</Label>
+          <Time>{formatTime(statuses.you.timestamp)}</Time>
+        </StatusCard>
+        <StatusCard>
+          <Emoji>{statuses.shona.emoji}</Emoji>
+          <Label>You</Label>
+          <Time>{formatTime(statuses.shona.timestamp)}</Time>
+        </StatusCard>
       </StatusRow>
 
       <EmojiSection>
         <Subtitle>What are you upto?</Subtitle>
         <EmojiGrid>
           {quickEmojis.map((emoji) => (
-    <EmojiButton
-      key={emoji}
-      onClick={() => updateStatus(emoji)}  // Removed 'you' parameter
-    >
-      {emoji}
-    </EmojiButton>
-  ))}
+            <EmojiButton
+              key={emoji}
+              onClick={() => updateStatus(emoji)}
+            >
+              {emoji}
+            </EmojiButton>
+          ))}
         </EmojiGrid>
       </EmojiSection>
 
