@@ -176,7 +176,7 @@ const Splash = ({ onFinish }) => {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [onFinish]);
+  }, [images.length, onFinish]);
 
   return (
     <SplashContainer>
